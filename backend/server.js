@@ -7,7 +7,7 @@ const app = express();
 // connect database
 connectDB();
 
-// middleware
+// middleware demo 
 app.use(express.json());
 app.use(cors());
 
