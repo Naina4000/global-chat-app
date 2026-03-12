@@ -43,4 +43,25 @@ router.post("/", authMiddleware, async (req, res) => {
   }
 });
 
+
+/* GET ALL MESSAGES OF A CHAT */
+router.get("/:chatId", authMiddleware, async (req, res) => {
+  try {
+
+    const messages = await Message.find({
+      chat: req.params.chatId
+    })
+      .populate("sender", "username email")
+      .populate("chat");
+
+    res.json(messages);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "Server error"
+    });
+  }
+});
+
 module.exports = router;
