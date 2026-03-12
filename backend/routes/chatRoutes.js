@@ -6,9 +6,8 @@ const authMiddleware = require("../middleware/authMiddleware");
 const router = express.Router();
 
 /*
-   CREATE OR ACCESS PRIVATE CHAT
+ACCESS OR CREATE PRIVATE CHAT
 */
-
 router.post("/", authMiddleware, async (req, res) => {
   try {
 
@@ -20,7 +19,6 @@ router.post("/", authMiddleware, async (req, res) => {
       });
     }
 
-    // Check if chat already exists
     let chat = await Chat.find({
       isGroupChat: false,
       users: { $all: [req.user.id, userId] }
@@ -32,7 +30,6 @@ router.post("/", authMiddleware, async (req, res) => {
       return res.json(chat[0]);
     }
 
-    // Create new chat
     const newChat = await Chat.create({
       chatName: "sender",
       isGroupChat: false,
@@ -52,4 +49,74 @@ router.post("/", authMiddleware, async (req, res) => {
   }
 });
 
+
+/*
+CREATE GROUP CHAT
+*/
+router.post("/group", authMiddleware, async (req, res) => {
+  try {
+
+    const { name, users } = req.body;
+
+    if (!name || !users) {
+      return res.status(400).json({
+        message: "Please provide group name and users"
+      });
+    }
+
+    if (!Array.isArray(users)) {
+      return res.status(400).json({
+        message: "Users must be an array"
+      });
+    }
+
+    const allUsers = [...users, req.user.id];
+
+    const groupChat = await Chat.create({
+      chatName: name,
+      users: allUsers,
+      isGroupChat: true,
+      groupAdmin: req.user.id
+    });
+
+    const fullGroupChat = await Chat.findById(groupChat._id)
+      .populate("users", "-password")
+      .populate("groupAdmin", "-password");
+
+    res.status(201).json(fullGroupChat);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "Server error"
+    });
+  }
+});
+
+
 module.exports = router;
+
+/*
+FETCH ALL CHATS FOR USER
+*/
+
+router.get("/", authMiddleware, async (req, res) => {
+  try {
+
+    const chats = await Chat.find({
+      users: { $elemMatch: { $eq: req.user.id } }
+    })
+      .populate("users", "-password")
+      .populate("groupAdmin", "-password")
+      .populate("lastMessage")
+      .sort({ updatedAt: -1 });
+
+    res.json(chats);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "Server error"
+    });
+  }
+});
