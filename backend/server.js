@@ -1,61 +1,110 @@
 const express = require("express");
+const mongoose = require("mongoose");
+const dotenv = require("dotenv");
 const cors = require("cors");
-require("dotenv").config();
 const http = require("http");
 const { Server } = require("socket.io");
 
-const connectDB = require("./config/db");
+dotenv.config();
 
-const authRoutes = require("./routes/authRoutes");
+const app = express();
+
+/* ================= MIDDLEWARE ================= */
+
+app.use(express.json());
+app.use(cors());
+
+/* ================= ROUTES ================= */
+
 const userRoutes = require("./routes/userRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 
-const app = express();
-
-connectDB();
-
-app.use(cors());
-app.use(express.json());
-
-app.use("/api/auth", authRoutes);
-app.use("/api/users", userRoutes);
+app.use("/api/auth", userRoutes);
 app.use("/api/chats", chatRoutes);
 app.use("/api/messages", messageRoutes);
 
-app.get("/", (req, res) => {
-  res.send("Chat Server is running...");
-});
+/* ================= DATABASE ================= */
 
-const PORT = process.env.PORT || 5000;
+mongoose
+  .connect("mongodb://127.0.0.1:27017/chatapp")
+  .then(() => {
+    console.log("✅ MongoDB Connected");
+  })
+  .catch((err) => {
+    console.error("❌ MongoDB Connection Error:", err);
+  });
+
+/* ================= EXPRESS SERVER ================= */
 
 const server = http.createServer(app);
 
+/* ================= SOCKET.IO ================= */
+
 const io = new Server(server, {
   cors: {
-    origin: "*"
+    origin: "*",
+    methods: ["GET", "POST"]
   }
 });
 
 io.on("connection", (socket) => {
 
-  console.log("User connected:", socket.id);
+  console.log("⚡ User connected:", socket.id);
 
-  socket.on("join_chat", (chatId) => {
-    socket.join(chatId);
-    console.log("User joined chat:", chatId);
+  /* USER SETUP */
+  socket.on("setup", (userData) => {
+
+    socket.join(userData._id);
+    console.log("User joined personal room:", userData._id);
+
+    socket.emit("connected");
   });
 
-  socket.on("send_message", (data) => {
-    socket.to(data.chatId).emit("receive_message", data);
+  /* JOIN CHAT ROOM */
+  socket.on("join chat", (room) => {
+
+    socket.join(room);
+    console.log("Joined chat room:", room);
+
   });
 
+  /* NEW MESSAGE */
+  socket.on("new message", (message) => {
+
+    const chat = message.chat;
+
+    if (!chat.users) return;
+
+    chat.users.forEach((user) => {
+
+      if (user._id == message.sender._id) return;
+
+      socket.to(user._id).emit("message received", message);
+
+    });
+
+  });
+
+  /* DISCONNECT */
   socket.on("disconnect", () => {
+
     console.log("User disconnected:", socket.id);
+
   });
 
 });
 
+/* ================= TEST ROUTE ================= */
+
+app.get("/", (req, res) => {
+  res.send("🚀 Chat API running...");
+});
+
+/* ================= START SERVER ================= */
+
+const PORT = process.env.PORT || 5000;
+
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
