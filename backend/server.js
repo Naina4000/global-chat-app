@@ -44,7 +44,7 @@ const io = new Server(server, {
   }
 });
 
-/* ================= ONLINE USERS STORE ================= */
+/* ================= ONLINE USERS ================= */
 
 let onlineUsers = new Map();
 
@@ -82,7 +82,7 @@ io.on("connection", (socket) => {
 
     socket.join(room);
 
-    console.log("💬 Joined chat room:", room);
+    console.log("💬 Joined chat:", room);
 
   });
 
@@ -112,9 +112,47 @@ io.on("connection", (socket) => {
 
       const userId = user._id || user;
 
-      if (userId == message.sender._id) return;
+      if (userId === message.sender._id) return;
 
       socket.to(userId).emit("message received", message);
+
+    });
+
+  });
+
+  /* ================= EDIT MESSAGE ================= */
+
+  socket.on("edit message", (message) => {
+
+    const chat = message.chat;
+
+    if (!chat || !chat.users) return;
+
+    chat.users.forEach((user) => {
+
+      const userId = user._id || user;
+
+      if (userId === message.sender._id) return;
+
+      socket.to(userId).emit("message edited", message);
+
+    });
+
+  });
+
+  /* ================= DELETE MESSAGE ================= */
+
+  socket.on("delete message", (data) => {
+
+    const { messageId, chat } = data;
+
+    if (!chat || !chat.users) return;
+
+    chat.users.forEach((user) => {
+
+      const userId = user._id || user;
+
+      socket.to(userId).emit("message deleted", messageId);
 
     });
 
