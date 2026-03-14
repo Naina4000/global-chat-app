@@ -64,15 +64,11 @@ io.on("connection", (socket) => {
 
     socket.join(userId);
 
-    /* SAVE ONLINE USER */
-
     onlineUsers.set(userId, socket.id);
 
     console.log("🟢 User online:", userId);
 
     const users = Array.from(onlineUsers.keys());
-
-    console.log("ONLINE USERS:", users);
 
     io.emit("online users", users);
 
@@ -87,6 +83,20 @@ io.on("connection", (socket) => {
     socket.join(room);
 
     console.log("💬 Joined chat room:", room);
+
+  });
+
+  /* ================= TYPING EVENTS ================= */
+
+  socket.on("typing", (room) => {
+
+    socket.to(room).emit("typing");
+
+  });
+
+  socket.on("stop typing", (room) => {
+
+    socket.to(room).emit("stop typing");
 
   });
 
@@ -116,21 +126,21 @@ io.on("connection", (socket) => {
 
     console.log("🔴 User disconnected:", socket.id);
 
-    /* REMOVE USER FROM ONLINE LIST */
-
     for (let [userId, socketId] of onlineUsers.entries()) {
 
       if (socketId === socket.id) {
+
         onlineUsers.delete(userId);
+
         console.log("User removed from online list:", userId);
+
         break;
+
       }
 
     }
 
     const users = Array.from(onlineUsers.keys());
-
-    console.log("ONLINE USERS:", users);
 
     io.emit("online users", users);
 
