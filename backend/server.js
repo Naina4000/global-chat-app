@@ -28,14 +28,10 @@ app.use("/api/messages", messageRoutes);
 
 mongoose
   .connect("mongodb://127.0.0.1:27017/chatapp")
-  .then(() => {
-    console.log("✅ MongoDB Connected");
-  })
-  .catch((err) => {
-    console.error("❌ MongoDB Connection Error:", err);
-  });
+  .then(() => console.log("✅ MongoDB Connected"))
+  .catch((err) => console.error("❌ MongoDB Connection Error:", err));
 
-/* ================= EXPRESS SERVER ================= */
+/* ================= CREATE SERVER ================= */
 
 const server = http.createServer(app);
 
@@ -48,48 +44,95 @@ const io = new Server(server, {
   }
 });
 
+/* ================= ONLINE USERS STORE ================= */
+
+let onlineUsers = new Map();
+
+/* ================= SOCKET CONNECTION ================= */
+
 io.on("connection", (socket) => {
 
   console.log("⚡ User connected:", socket.id);
 
-  /* USER SETUP */
+  /* ================= USER SETUP ================= */
+
   socket.on("setup", (userData) => {
 
-    socket.join(userData._id);
-    console.log("User joined personal room:", userData._id);
+    if (!userData || !userData._id) return;
+
+    const userId = userData._id;
+
+    socket.join(userId);
+
+    /* SAVE ONLINE USER */
+
+    onlineUsers.set(userId, socket.id);
+
+    console.log("🟢 User online:", userId);
+
+    const users = Array.from(onlineUsers.keys());
+
+    console.log("ONLINE USERS:", users);
+
+    io.emit("online users", users);
 
     socket.emit("connected");
+
   });
 
-  /* JOIN CHAT ROOM */
+  /* ================= JOIN CHAT ROOM ================= */
+
   socket.on("join chat", (room) => {
 
     socket.join(room);
-    console.log("Joined chat room:", room);
+
+    console.log("💬 Joined chat room:", room);
 
   });
 
-  /* NEW MESSAGE */
+  /* ================= NEW MESSAGE ================= */
+
   socket.on("new message", (message) => {
 
     const chat = message.chat;
 
-    if (!chat.users) return;
+    if (!chat || !chat.users) return;
 
     chat.users.forEach((user) => {
 
-      if (user._id == message.sender._id) return;
+      const userId = user._id || user;
 
-      socket.to(user._id).emit("message received", message);
+      if (userId == message.sender._id) return;
+
+      socket.to(userId).emit("message received", message);
 
     });
 
   });
 
-  /* DISCONNECT */
+  /* ================= DISCONNECT ================= */
+
   socket.on("disconnect", () => {
 
-    console.log("User disconnected:", socket.id);
+    console.log("🔴 User disconnected:", socket.id);
+
+    /* REMOVE USER FROM ONLINE LIST */
+
+    for (let [userId, socketId] of onlineUsers.entries()) {
+
+      if (socketId === socket.id) {
+        onlineUsers.delete(userId);
+        console.log("User removed from online list:", userId);
+        break;
+      }
+
+    }
+
+    const users = Array.from(onlineUsers.keys());
+
+    console.log("ONLINE USERS:", users);
+
+    io.emit("online users", users);
 
   });
 
