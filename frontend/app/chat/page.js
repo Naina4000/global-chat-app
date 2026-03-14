@@ -15,10 +15,10 @@ const [onlineUsers, setOnlineUsers] = useState([]);
 const [unreadMessages, setUnreadMessages] = useState({});
 const [editingMessageId, setEditingMessageId] = useState(null);
 const [editedText, setEditedText] = useState("");
-
-// SEARCH STATES
 const [search, setSearch] = useState("");
 const [searchResults, setSearchResults] = useState([]);
+const [typing, setTyping] = useState(false);
+const [isTyping, setIsTyping] = useState(false);
 
 const messagesEndRef = useRef(null);
 
@@ -61,6 +61,16 @@ console.log("Socket connected");
 
 socket.on("online users", (users) => {
 setOnlineUsers(users);
+});
+
+/* ================= TYPING ================= */
+
+socket.on("typing", () => {
+  setIsTyping(true);
+});
+
+socket.on("stop typing", () => {
+  setIsTyping(false);
 });
 
 /* ================= NEW MESSAGE ================= */
@@ -693,12 +703,43 @@ minute: "2-digit"
 
 </div>
 
+{isTyping && (
+<div style={{ fontSize: "12px", color: "#aaa", marginBottom: "5px" }}>
+typing...
+</div>
+)}
 <div style={{ display: "flex" }}>
 
 <input
 style={{ flex: 1 }}
 value={newMessage}
-onChange={(e) => setNewMessage(e.target.value)}
+onChange={(e) => {
+
+setNewMessage(e.target.value);
+
+if (!socket) return;
+
+if (!typing) {
+setTyping(true);
+socket.emit("typing", selectedChat._id);
+}
+
+let lastTypingTime = new Date().getTime();
+const timerLength = 3000;
+
+setTimeout(() => {
+
+const timeNow = new Date().getTime();
+const timeDiff = timeNow - lastTypingTime;
+
+if (timeDiff >= timerLength && typing) {
+socket.emit("stop typing", selectedChat._id);
+setTyping(false);
+}
+
+}, timerLength);
+
+}}
 placeholder="Type message..."
 />
 
