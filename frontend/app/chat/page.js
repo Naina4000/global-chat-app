@@ -19,7 +19,6 @@ const [search, setSearch] = useState("");
 const [searchResults, setSearchResults] = useState([]);
 const [typing, setTyping] = useState(false);
 const [isTyping, setIsTyping] = useState(false);
-
 const messagesEndRef = useRef(null);
 
 const token =
