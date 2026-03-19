@@ -5,7 +5,6 @@ import { useState } from "react";
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const handleLogin = async () => {
     const res = await fetch("http://localhost:5000/api/auth/login", {
       method: "POST",
