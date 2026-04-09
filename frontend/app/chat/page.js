@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useRef } from "react";
 import io from "socket.io-client";
+import "./chat.css";
+import ChatUI from "./ChatUI";
 
 let socket;
 
@@ -19,7 +21,12 @@ const [search, setSearch] = useState("");
 const [searchResults, setSearchResults] = useState([]);
 const [typing, setTyping] = useState(false);
 const [isTyping, setIsTyping] = useState(false);
+const selectedChatRef = useRef();
 const messagesEndRef = useRef(null);
+
+useEffect(() => {
+  selectedChatRef.current = selectedChat;
+}, [selectedChat]);
 
 const token =
 typeof window !== "undefined"
@@ -101,7 +108,7 @@ return updated;
 
 setMessages((prevMessages) => {
 
-if (selectedChat && selectedChat._id === message.chat._id) {
+if (selectedChatRef.current && selectedChatRef.current._id === message.chat._id) {
 return [...prevMessages, message];
 }
 
@@ -109,7 +116,7 @@ return prevMessages;
 
 });
 
-if (!selectedChat || selectedChat._id !== message.chat._id) {
+if (!selectedChatRef.current || selectedChatRef.current._id !== message.chat._id) {
 
 setUnreadMessages((prev) => ({
 ...prev,
@@ -172,7 +179,7 @@ return () => {
 socket.disconnect();
 };
 
-}, [selectedChat]);
+}, []);
 
 /* ================= AUTO SCROLL ================= */
 
@@ -428,333 +435,54 @@ console.error(error);
 
 /* ================= HELPERS ================= */
 
+/* HELPERS */
 const getChatName = (chat) => {
-
 if (chat.isGroupChat) return chat.chatName;
-
 const otherUser = chat.users.find(
 (user) => user._id !== currentUserId
 );
-
 return otherUser?.username || "Private Chat";
-
 };
 
 const getOtherUser = (chat) => {
-
 if (chat.isGroupChat) return null;
-
 return chat.users.find(
 (user) => user._id !== currentUserId
 );
-
 };
 
+/* UI */
 return (
-<div style={{ display: "flex", height: "100vh" }}>
-
-<div style={{ width: "300px", borderRight: "1px solid #444", padding: "20px" }}>
-
-<button
-onClick={() => {
-localStorage.removeItem("token");
-window.location.href = "/login";
-}}
-style={{
-padding: "8px",
-background: "red",
-border: "none",
-color: "white",
-cursor: "pointer",
-marginBottom: "20px"
-}}
->
-Logout
-</button>
-
-<input
-placeholder="Search users..."
-value={search}
-onChange={(e) => searchUsers(e.target.value)}
-style={{ width: "100%", padding: "8px", marginBottom: "10px" }}
-/>
-
-{searchResults.map((user) => (
-<div
-key={user._id}
-onClick={() => startChat(user._id)}
-style={{
-padding: "8px",
-borderBottom: "1px solid #444",
-cursor: "pointer"
-}}
->
-{user.username}
-</div>
-))}
-
-<h2>Chats</h2>
-
-{chats.map((chat) => {
-
-const otherUser = getOtherUser(chat);
-const isOnline = onlineUsers.includes(otherUser?._id);
-
-return (
-
-<div
-key={chat._id}
-onClick={() => {
-
-setSelectedChat(chat);
-
-if (socket) {
-socket.emit("join chat", chat._id);
-}
-
-fetchMessages(chat._id);
-
-setUnreadMessages((prev) => ({
-...prev,
-[chat._id]: 0
-}));
-
-}}
-style={{
-padding: "10px",
-marginBottom: "10px",
-border: "1px solid #555",
-cursor: "pointer",
-display: "flex",
-alignItems: "center"
-}}
->
-
-<img
-src={
-chat.isGroupChat
-? "https://cdn-icons-png.flaticon.com/512/194/194938.png"
-: otherUser?.profilePic || "https://i.pravatar.cc/40"
-}
-style={{
-width: "35px",
-height: "35px",
-borderRadius: "50%",
-marginRight: "10px"
-}}
-/>
-
-<div style={{ flex: 1 }}>
-
-<div style={{ fontWeight: "bold" }}>
-{getChatName(chat)}
-
-{isOnline && (
-<span style={{ color: "lime", marginLeft: "6px" }}>●</span>
-)}
-
-{unreadMessages[chat._id] > 0 && (
-<span
-style={{
-background: "red",
-color: "white",
-borderRadius: "12px",
-padding: "2px 6px",
-fontSize: "12px",
-marginLeft: "8px"
-}}
->
-{unreadMessages[chat._id]}
-</span>
-)}
-
-</div>
-
-<div style={{ fontSize: "12px", opacity: 0.7 }}>
-{chat.lastMessage?.content || ""}
-</div>
-
-</div>
-
-</div>
-
-);
-
-})}
-
-</div>
-
-{/* CHAT WINDOW */}
-
-<div style={{ flex: 1, padding: "20px", display: "flex", flexDirection: "column" }}>
-
-{selectedChat ? (
-<>
-<h2>{getChatName(selectedChat)}</h2>
-
-<div
-style={{
-flex: 1,
-border: "1px solid #444",
-padding: "15px",
-overflowY: "scroll",
-marginBottom: "10px",
-background: "#111"
-}}
->
-
-{messages.map((msg) => {
-
-const isMe = msg.sender?._id === currentUserId;
-
-return (
-
-<div
-key={msg._id}
-style={{
-display: "flex",
-justifyContent: isMe ? "flex-end" : "flex-start",
-marginBottom: "12px"
-}}
->
-
-<div
-style={{
-background: isMe ? "#4CAF50" : "#333",
-color: "white",
-padding: "10px",
-borderRadius: "10px",
-maxWidth: "60%"
-}}
->
-
-{editingMessageId === msg._id ? (
-<>
-<input
-value={editedText}
-onChange={(e) => setEditedText(e.target.value)}
-/>
-
-<button onClick={() => editMessage(msg._id)}>
-Save
-</button>
-</>
-) : (
-
-<div
-style={{
-fontStyle: msg.deleted ? "italic" : "normal",
-opacity: msg.deleted ? 0.6 : 1
-}}
->
-{msg.content}
-</div>
-
-)}
-
-{isMe && !msg.deleted && editingMessageId !== msg._id && (
-
-<div style={{ fontSize: "10px", marginTop: "4px" }}>
-
-<button
-onClick={() => {
-setEditingMessageId(msg._id);
-setEditedText(msg.content);
-}}
->
-Edit
-</button>
-
-<button
-onClick={() => deleteMessage(msg._id)}
-style={{ marginLeft: "5px" }}
->
-Delete
-</button>
-
-</div>
-
-)}
-
-<div
-style={{
-fontSize: "10px",
-opacity: 0.7,
-marginTop: "4px",
-textAlign: "right"
-}}
->
-{new Date(msg.createdAt).toLocaleTimeString([], {
-hour: "2-digit",
-minute: "2-digit"
-})}
-</div>
-
-</div>
-
-</div>
-
-);
-
-})}
-
-<div ref={messagesEndRef} />
-
-</div>
-
-{isTyping && (
-<div style={{ fontSize: "12px", color: "#aaa", marginBottom: "5px" }}>
-typing...
-</div>
-)}
-<div style={{ display: "flex" }}>
-
-<input
-style={{ flex: 1 }}
-value={newMessage}
-onChange={(e) => {
-
-setNewMessage(e.target.value);
-
-if (!socket) return;
-
-if (!typing) {
-setTyping(true);
-socket.emit("typing", selectedChat._id);
-}
-
-let lastTypingTime = new Date().getTime();
-const timerLength = 3000;
-
-setTimeout(() => {
-
-const timeNow = new Date().getTime();
-const timeDiff = timeNow - lastTypingTime;
-
-if (timeDiff >= timerLength && typing) {
-socket.emit("stop typing", selectedChat._id);
-setTyping(false);
-}
-
-}, timerLength);
-
-}}
-placeholder="Type message..."
-/>
-
-<button onClick={sendMessage}>
-Send
-</button>
-
-</div>
-
-</>
-) : (
-<h2>Select a chat</h2>
-)}
-
-</div>
-
-</div>
+  <ChatUI
+    chats={chats}
+    selectedChat={selectedChat}
+    messages={messages}
+    newMessage={newMessage}
+    setNewMessage={setNewMessage}
+    sendMessage={sendMessage}
+    search={search}
+    searchUsers={searchUsers}
+    searchResults={searchResults}
+    startChat={startChat}
+    getChatName={getChatName}
+    getOtherUser={getOtherUser}
+    fetchMessages={fetchMessages}
+    setSelectedChat={setSelectedChat}
+    unreadMessages={unreadMessages}
+    setUnreadMessages={setUnreadMessages}
+    onlineUsers={onlineUsers}
+    currentUserId={currentUserId}
+    editingMessageId={editingMessageId}
+    setEditingMessageId={setEditingMessageId}
+    editedText={editedText}
+    setEditedText={setEditedText}
+    editMessage={editMessage}
+    deleteMessage={deleteMessage}
+    isTyping={isTyping}
+    typing={typing}
+    setTyping={setTyping}
+    socket={socket}
+    messagesEndRef={messagesEndRef}
+  />
 );
 }
