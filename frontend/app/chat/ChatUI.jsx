@@ -33,216 +33,271 @@ export default function ChatUI({
 return (
 <div className="chat-container">
 
-<div className="sidebar">
+  {/* ICON BAR */}
+  <div className="icon-bar">
+    <div className="icon">⚡</div>
+    <div className="icon">💬</div>
+    <div className="icon">📞</div>
+  </div>
 
-<button className="logout-btn"
-onClick={() => {
-localStorage.removeItem("token");
-window.location.href = "/login";
-}}>
-Logout
-</button>
+  {/* SIDEBAR */}
+  <div className="sidebar">
 
-<input
-className="search-input"
-placeholder="Search users..."
-value={search}
-onChange={(e) => searchUsers(e.target.value)}
-/>
+    <button className="logout-btn"
+    onClick={() => {
+      localStorage.removeItem("token");
+      window.location.href = "/login";
+    }}>
+    Logout
+  </button>
 
-{searchResults.map((user) => (
-<div key={user._id}
-onClick={() => startChat(user._id)}
-className="search-item">
-{user.username}
-</div>
-))}
 
-<h2>Chats</h2>
+     <input
+    className="search-input"
+    placeholder="Search users..."
+    value={search}
+    onChange={(e) => searchUsers(e.target.value)}
+  />
 
-{chats.map((chat) => {
 
-const otherUser = getOtherUser(chat);
-const isOnline = onlineUsers.includes(otherUser?._id);
+    {searchResults.map((user) => (
+      <div
+        key={user._id}
+        onClick={() => startChat(user._id)}
+        className="search-item"
+      >
+        {user.username}
+      </div>
+    ))}
 
-return (
+    <h2>Chats</h2>
 
-<div key={chat._id}
-className="chat-item"
-onClick={() => {
+    {chats.map((chat) => {
 
-setSelectedChat(chat);
+      const otherUser = getOtherUser(chat);
+      const isOnline =
+        otherUser && onlineUsers.includes(otherUser._id);
 
-fetchMessages(chat._id);
+      return (
+        <div
+          key={chat._id}
+          className="chat-item"
+          onClick={() => {
+            setSelectedChat(chat);
+            fetchMessages(chat._id);
+            setUnreadMessages((prev) => ({
+              ...prev,
+              [chat._id]: 0
+            }));
+          }}
+        >
 
-setUnreadMessages((prev) => ({
-...prev,
-[chat._id]: 0
-}));
+          <img
+            className="avatar"
+            src={
+              chat.isGroupChat
+                ? "https://cdn-icons-png.flaticon.com/512/194/194938.png"
+                : otherUser?.profilePic || "https://i.pravatar.cc/40"
+            }
+          />
 
-}}>
+          <div className="chat-info">
 
-<img
-className="avatar"
-src={
-chat.isGroupChat
-? "https://cdn-icons-png.flaticon.com/512/194/194938.png"
-: otherUser?.profilePic || "https://i.pravatar.cc/40"
-}
-/>
+            <div className="chat-name">
+              {getChatName(chat)}
 
-<div className="chat-info">
+              {isOnline && <span className="online-dot">●</span>}
 
-<div className="chat-name">
-{getChatName(chat)}
+              {unreadMessages[chat._id] > 0 && (
+                <span className="unread">
+                  {unreadMessages[chat._id]}
+                </span>
+              )}
 
-{isOnline && <span className="online-dot">●</span>}
+            </div>
 
-{unreadMessages[chat._id] > 0 && (
-<span className="unread">
-{unreadMessages[chat._id]}
-</span>
-)}
+            <div className="chat-last">
+              {chat.lastMessage?.content || ""}
+            </div>
 
-</div>
+          </div>
 
-<div className="chat-last">
-{chat.lastMessage?.content || ""}
-</div>
+        </div>
+      );
+    })}
 
-</div>
+  </div>
 
-</div>
+  {/* CHAT WINDOW */}
+  <div className="chat-window">
 
-);
+    {selectedChat ? (
+      <>
+        {/* HEADER */}
+        <div className="chat-header">
+  <img
+    src={getOtherUser(selectedChat)?.profilePic || "https://i.pravatar.cc/40"}
+    className="header-avatar"
+  />
 
-})}
-
-</div>
-
-<div className="chat-window">
-
-{selectedChat ? (
-<>
-<h2>{getChatName(selectedChat)}</h2>
-
-<div className="messages">
-
-{messages.map((msg) => {
-
-const isMe = msg.sender?._id === currentUserId;
-
-return (
-
-<div key={msg._id}
-className={`message-row ${isMe ? "me" : "other"}`}>
-
-<div className={`message ${isMe ? "me" : "other"}`}>
-
-{editingMessageId === msg._id ? (
-<>
-<input
-value={editedText}
-onChange={(e) => setEditedText(e.target.value)}
-/>
-
-<button onClick={() => editMessage(msg._id)}>
-Save
-</button>
-</>
-) : (
-
-<div className={`message-text ${msg.deleted ? "deleted" : ""}`}>
-{msg.content}
+  <div>
+    <div className="chat-title">{getChatName(selectedChat)}</div>
+    <div className="chat-status">
+      {isTyping ? "Typing..." : "Active now"}
+    </div>
+  </div>
 </div>
 
-)}
+        {/* MESSAGES */}
+        <div className="messages">
 
-{isMe && !msg.deleted && editingMessageId !== msg._id && (
+          {messages.map((msg) => {
 
-<div className="message-actions">
+            const isMe = msg.sender?._id === currentUserId;
 
-<button
-onClick={() => {
-setEditingMessageId(msg._id);
-setEditedText(msg.content);
-}}>
-Edit
-</button>
+            return (
+              <div
+                key={msg._id}
+                className={`message-row ${isMe ? "me" : "other"}`}
+              >
 
-<button onClick={() => deleteMessage(msg._id)}>
-Delete
-</button>
+                <div className={`message ${isMe ? "me" : "other"}`}>
 
-</div>
+                  {/* EDIT MODE */}
+                  {editingMessageId === msg._id ? (
+                    <>
+                      <input
+                        className="edit-input"
+                        value={editedText}
+                        onChange={(e) =>
+                          setEditedText(e.target.value)
+                        }
+                      />
 
-)}
+                      <button
+                        className="save-btn"
+                        onClick={() => editMessage(msg._id)}
+                      >
+                        Save
+                      </button>
+                    </>
+                  ) : (
+                    <div
+                      className={`message-text ${
+                        msg.deleted ? "deleted" : ""
+                      }`}
+                    >
+                      {msg.content}
+                    </div>
+                  )}
 
-<div className="time">
-{new Date(msg.createdAt).toLocaleTimeString([], {
-hour: "2-digit",
-minute: "2-digit"
-})}
-</div>
+                  {/* ACTIONS */}
+                  {isMe &&
+                    !msg.deleted &&
+                    editingMessageId !== msg._id && (
 
-</div>
+                      <div className="message-actions">
 
-</div>
+                        <button
+                          className="edit-btn"
+                          onClick={() => {
+                            setEditingMessageId(msg._id);
+                            setEditedText(msg.content);
+                          }}
+                        >
+                          Edit
+                        </button>
 
-);
+                        <button
+                          className="delete-btn"
+                          onClick={() => deleteMessage(msg._id)}
+                        >
+                          Delete
+                        </button>
 
-})}
+                      </div>
+                  )}
 
-<div ref={messagesEndRef} />
+                  {/* TIME */}
+                  <div className="time">
+                    {new Date(msg.createdAt).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit"
+                    })}
+                  </div>
 
-</div>
+                </div>
 
-{isTyping && <div className="typing">typing...</div>}
+              </div>
+            );
+          })}
 
-<div className="input-box">
+          <div ref={messagesEndRef} />
 
-<input
-value={newMessage}
-onChange={(e) => {
+        </div>
 
-setNewMessage(e.target.value);
+        {/* TYPING */}
+        {isTyping && (
+          <div className="typing-indicator">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        )}
 
-if (!socket) return;
+        {/* INPUT */}
+        <div className="input-box">
 
-if (!typing) {
-setTyping(true);
-socket.emit("typing", selectedChat._id);
-}
+          <input
+            className="message-input"
+            value={newMessage}
+            onChange={(e) => {
 
-let lastTypingTime = new Date().getTime();
-const timerLength = 3000;
+              setNewMessage(e.target.value);
 
-setTimeout(() => {
+              if (!socket) return;
 
-const timeNow = new Date().getTime();
-const timeDiff = timeNow - lastTypingTime;
+              if (!typing) {
+                setTyping(true);
+                socket.emit("typing", selectedChat._id);
+              }
 
-if (timeDiff >= timerLength && typing) {
-socket.emit("stop typing", selectedChat._id);
-setTyping(false);
-}
+              let lastTypingTime = new Date().getTime();
+              const timerLength = 3000;
 
-}, timerLength);
+              setTimeout(() => {
 
-}}
-placeholder="Type message..."
-/>
+                const timeNow = new Date().getTime();
+                const timeDiff = timeNow - lastTypingTime;
 
-<button onClick={sendMessage}>Send</button>
+                if (timeDiff >= timerLength && typing) {
+                  socket.emit("stop typing", selectedChat._id);
+                  setTyping(false);
+                }
 
-</div>
+              }, timerLength);
 
-</>
-) : (
-<h2>Select a chat</h2>
-)}
+            }}
+            placeholder="Type a message..."
+          />
 
-</div>
+          <button
+            className="send-btn"
+            onClick={sendMessage}
+          >
+            ➤
+          </button>
+
+        </div>
+
+      </>
+    ) : (
+      <div className="empty-chat">
+        <h2>Select a chat</h2>
+      </div>
+    )}
+
+  </div>
 
 </div>
 );
