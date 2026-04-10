@@ -13,7 +13,7 @@ router.post("/register", async (req, res) => {
 
   try {
 
-    const { username, email, password } = req.body;
+    const { username, email, password, phone } = req.body;
 
     if (!username || !email || !password) {
       return res.status(400).json({
@@ -35,7 +35,8 @@ router.post("/register", async (req, res) => {
     const newUser = new User({
       username,
       email,
-      password: hashedPassword
+      password: hashedPassword,
+      phone
     });
 
     await newUser.save();
@@ -203,3 +204,49 @@ router.get("/", authMiddleware, async (req, res) => {
 
 
 module.exports = router;
+
+
+/* ================= GET CURRENT USER ================= */
+
+router.get("/me", authMiddleware, async (req, res) => {
+  try {
+
+    const user = await require("../models/User")
+      .findById(req.user.id)
+      .select("-password");
+
+    res.json(user);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+/* ================= UPDATE PROFILE ================= */
+
+router.put("/update", authMiddleware, async (req, res) => {
+  try {
+
+    const { username, email, phone, profilePic } = req.body;
+
+    const updatedUser = await require("../models/User")
+      .findByIdAndUpdate(
+        req.user.id,
+        {
+          username,
+          email,
+          phone,
+          profilePic
+        },
+        { new: true }
+      )
+      .select("-password");
+
+    res.json(updatedUser);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Update failed" });
+  }
+});
