@@ -30,6 +30,11 @@ const userSchema = new mongoose.Schema(
 
     lastSeen: {
         type: Date
+    },
+    
+    phone: {
+        type: String,
+        default: ""
     }
 },
 {
