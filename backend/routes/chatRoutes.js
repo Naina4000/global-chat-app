@@ -96,9 +96,7 @@ router.post("/group", authMiddleware, async (req, res) => {
 
 module.exports = router;
 
-/*
-FETCH ALL CHATS FOR USER
-*/
+/* FETCH ALL CHATS FOR USER */
 
 router.get("/", authMiddleware, async (req, res) => {
   try {
