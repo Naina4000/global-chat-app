@@ -1,3 +1,4 @@
+const Message = require("./models/Message");
 const express = require("express");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
@@ -104,60 +105,60 @@ io.on("connection", (socket) => {
 
   socket.on("new message", (message) => {
 
-    const chat = message.chat;
+  const chat = message.chat;
 
-    if (!chat || !chat.users) return;
+  if (!chat || !chat._id) return;
 
-    chat.users.forEach((user) => {
+  socket.to(chat._id).emit("message received", message);
 
-      const userId = user._id || user;
+});
+ /* ================= MESSAGE DELIVERED ================= */
 
-      if (userId === message.sender._id) return;
-
-      socket.to(userId).emit("message received", message);
-
-    });
-
+socket.on("message received", async (message) => {
+  await Message.findByIdAndUpdate(message._id, {
+    status: "delivered"
   });
+
+  socket.emit("message delivered", message._id);
+});
+
+ /* ================= MESSAGE SEEN ================= */
+
+socket.on("message seen", async (chatId) => {
+  await Message.updateMany(
+    { chat: chatId, status: { $ne: "seen" } },
+    { status: "seen" }
+  );
+
+  socket.emit("messages seen", chatId);
+});
 
   /* ================= EDIT MESSAGE ================= */
 
-  socket.on("edit message", (message) => {
+ socket.on("edit message", (message) => {
 
-    const chat = message.chat;
+  const chat = message.chat;
 
-    if (!chat || !chat.users) return;
+  if (!chat || !chat._id) return;
 
-    chat.users.forEach((user) => {
+  socket.to(chat._id).emit("message edited", message);
 
-      const userId = user._id || user;
-
-      if (userId === message.sender._id) return;
-
-      socket.to(userId).emit("message edited", message);
-
-    });
-
-  });
+});
 
   /* ================= DELETE MESSAGE ================= */
 
-  socket.on("delete message", (data) => {
+ socket.on("delete message", (data) => {
 
-    const { messageId, chat } = data;
+  const { messageId, chatId } = data;
 
-    if (!chat || !chat.users) return;
+  if (!chatId) return;
 
-    chat.users.forEach((user) => {
-
-      const userId = user._id || user;
-
-      socket.to(userId).emit("message deleted", messageId);
-
-    });
-
+  socket.to(chatId).emit("message deleted", {
+    messageId,
+    chatId
   });
 
+});
   /* ================= DISCONNECT ================= */
 
   socket.on("disconnect", () => {
@@ -199,3 +200,4 @@ const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
+
