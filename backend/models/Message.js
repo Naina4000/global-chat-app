@@ -15,6 +15,17 @@ const messageSchema = new mongoose.Schema(
   chat: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Chat"
+  },
+
+  deleted: {
+    type: Boolean,
+    default: false
+  },
+
+  status: {
+    type: String,
+    enum: ["sent", "delivered", "seen"],
+    default: "sent"
   }
 
 },
