@@ -1,27 +1,47 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const handleLogin = async () => {
-    const res = await fetch("http://localhost:5000/api/auth/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ email, password }),
-    });
+  const router = useRouter();
 
-    const data = await res.json();
+  const handleLogin = async (e) => {
+    e.preventDefault(); // ✅ VERY IMPORTANT
 
-    if (data.token) {
-      localStorage.setItem("token", data.token);
-      alert("Login successful");
-      window.location.href = "/chat";
-    } else {
-      alert(data.message);
+    try {
+      console.log("Login clicked");
+
+      const res = await fetch("http://localhost:5000/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      console.log("LOGIN RESPONSE:", data);
+
+      if (data.token) {
+        // ✅ Save full user info
+        localStorage.setItem("userInfo", JSON.stringify(data));
+
+        console.log("Saved:", localStorage.getItem("userInfo"));
+
+        alert("Login successful");
+
+        // ✅ Reliable redirect
+        router.push("/chat");
+      } else {
+        alert(data.message || "Login failed");
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      alert("Something went wrong");
     }
   };
 
@@ -37,65 +57,34 @@ export default function LoginPage() {
         fontFamily: "Arial",
       }}
     >
-      <div
-        style={{
-          width: "320px",
-          background: "#1e293b",
-          padding: "30px",
-          borderRadius: "10px",
-          boxShadow: "0px 0px 10px rgba(0,0,0,0.5)",
-        }}
-      >
-        <h2 style={{ marginBottom: "20px" }}>Login</h2>
+      <form
+  onSubmit={(e) => {
+    e.preventDefault();
+    handleLogin(e);
+  }}
+>
+  <input
+    type="email"
+    name="email"
+    placeholder="Email"
+    value={email}
+    onChange={(e) => setEmail(e.target.value)}
+    required
+  />
 
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          style={{
-            width: "100%",
-            padding: "10px",
-            marginBottom: "15px",
-            borderRadius: "5px",
-            border: "1px solid #475569",
-            background: "#020617",
-            color: "white",
-          }}
-        />
+  <input
+    type="password"
+    name="password"
+    placeholder="Password"
+    value={password}
+    onChange={(e) => setPassword(e.target.value)}
+    required
+  />
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={{
-            width: "100%",
-            padding: "10px",
-            marginBottom: "20px",
-            borderRadius: "5px",
-            border: "1px solid #475569",
-            background: "#020617",
-            color: "white",
-          }}
-        />
-
-        <button
-          onClick={handleLogin}
-          style={{
-            width: "100%",
-            padding: "10px",
-            background: "#22c55e",
-            border: "none",
-            borderRadius: "5px",
-            color: "white",
-            cursor: "pointer",
-            fontWeight: "bold",
-          }}
-        >
-          Login
-        </button>
-      </div>
+  <button type="submit">
+    Login
+  </button>
+</form>
     </div>
   );
 }
