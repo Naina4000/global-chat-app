@@ -1,9 +1,12 @@
 "use client";
-
+import "./settings.css";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function SettingsPage() {
 
+  const router = useRouter();
+  const [isEditing, setIsEditing] = useState(false);
   const [user, setUser] = useState({
     username: "",
     email: "",
@@ -11,10 +14,22 @@ export default function SettingsPage() {
     profilePic: ""
   });
 
-  const token =
-    typeof window !== "undefined"
-      ? localStorage.getItem("token")
-      : null;
+  const userInfo =
+  typeof window !== "undefined"
+    ? JSON.parse(localStorage.getItem("userInfo"))
+    : null;
+
+const token = userInfo?.token;
+
+  /* ================= PROTECT ROUTE ================= */
+
+  useEffect(() => {
+    const userInfo = localStorage.getItem("userInfo");
+
+    if (!userInfo) {
+      router.push("/login");
+    }
+  }, []);
 
   /* ================= FETCH USER ================= */
 
@@ -26,6 +41,11 @@ export default function SettingsPage() {
             Authorization: "Bearer " + token
           }
         });
+
+        if (!res.ok) {
+          console.error("Fetch user failed:", res.status);
+          return;
+        }
 
         const data = await res.json();
         setUser(data);
@@ -51,72 +71,120 @@ export default function SettingsPage() {
         body: JSON.stringify(user)
       });
 
-      const data = await res.json();
+      if (!res.ok) {
+        console.error("Update failed:", res.status);
+        return;
+      }
+
+      await res.json();
 
       alert("Profile updated");
+      setIsEditing(false); // ✅ exit edit mode
 
     } catch (err) {
       console.error(err);
     }
   };
 
+  /* ================= LOGOUT ================= */
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("userInfo");
+    router.push("/login");
+  };
+  
+
   return (
     <div className="settings-container">
-
-      <h2>⚙️ Settings</h2>
-
+      <div className="back-button" onClick={() => router.push("/chat")}>
+        ← 
+        </div>
       <div className="settings-card">
 
+        <h2 className="settings-title">⚙️ Settings</h2>
+
+        {/* PROFILE IMAGE */}
         <img
           src={user.profilePic || "https://i.pravatar.cc/100"}
           className="profile-img"
         />
 
-        <input
-          placeholder="Username"
-          value={user.username}
-          onChange={(e) =>
-            setUser({ ...user, username: e.target.value })
-          }
-        />
+        {/* USERNAME */}
+        <div className="input-group">
+          <label>Username</label>
+          <input
+            disabled={!isEditing}
+            value={user.username}
+            onChange={(e) =>
+              setUser({ ...user, username: e.target.value })
+            }
+          />
+        </div>
 
-        <input
-          placeholder="Email"
-          value={user.email}
-          onChange={(e) =>
-            setUser({ ...user, email: e.target.value })
-          }
-        />
+        {/* EMAIL */}
+        <div className="input-group">
+          <label>Email</label>
+          <input
+            disabled={!isEditing}
+            value={user.email}
+            onChange={(e) =>
+              setUser({ ...user, email: e.target.value })
+            }
+          />
+        </div>
 
-        <input
-          placeholder="Phone"
-          value={user.phone}
-          onChange={(e) =>
-            setUser({ ...user, phone: e.target.value })
-          }
-        />
+        {/* PHONE */}
+        <div className="input-group">
+          <label>Phone</label>
+          <input
+            disabled={!isEditing}
+            value={user.phone}
+            onChange={(e) =>
+              setUser({ ...user, phone: e.target.value })
+            }
+          />
+        </div>
 
-        <input
-          placeholder="Profile Image URL"
-          value={user.profilePic}
-          onChange={(e) =>
-            setUser({ ...user, profilePic: e.target.value })
-          }
-        />
+        {/* PROFILE PIC */}
+        <div className="input-group">
+          <label>Profile Image URL</label>
+          <input
+            disabled={!isEditing}
+            value={user.profilePic}
+            onChange={(e) =>
+              setUser({ ...user, profilePic: e.target.value })
+            }
+          />
+        </div>
 
-        <button onClick={updateProfile}>
-          Save Changes
-        </button>
+        {/* BUTTONS */}
+        <div className="button-group">
 
-        <button
-          className="logout-btn"
-          onClick={() => {
-            localStorage.removeItem("token");
-            window.location.href = "/login";
-          }}
-        >
-          Logout
-        </button>
+          {!isEditing ? (
+            <button
+              className="edit-btn"
+              onClick={() => setIsEditing(true)}
+            >
+              Edit Profile
+            </button>
+          ) : (
+            <button
+              className="save-btn"
+              onClick={updateProfile}
+            >
+              Save Changes
+            </button>
+          )}
+
+          <button
+            className="logout-btn"
+            onClick={handleLogout}
+          >
+            Logout
+          </button>
+
+        </div>
 
       </div>
 
