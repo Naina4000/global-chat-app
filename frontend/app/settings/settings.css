@@ -1,42 +1,177 @@
+/* BACKGROUND */
 .settings-container {
+  position: relative; 
+  height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
-  background: #020617;
-  color: white;
+  background: #eef2f7;
+  font-family: Arial, sans-serif;
 }
 
+/* CARD */
 .settings-card {
-  background: #1e293b;
+  width: 420px;
+  background: #ffffff;
   padding: 30px;
-  border-radius: 15px;
-  width: 350px;
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 20px;
 }
 
+/* TITLE */
+.settings-title {
+  text-align: center;
+  font-size: 22px;
+  font-weight: bold;
+  color: #1e293b;
+}
+
+/* PROFILE IMAGE */
+.profile-img {
+  width: 95px;
+  height: 95px;
+  border-radius: 50%;
+  margin: auto;
+  object-fit: cover;
+  border: 3px solid #6366f1;
+}
+
+/* INPUT GROUP */
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input-group label {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* INPUT */
 .settings-card input {
-  padding: 10px;
+  padding: 12px;
   border-radius: 10px;
-  border: none;
-  background: #0f172a;
-  color: white;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 14px;
+  transition: 0.2s;
 }
 
-.settings-card button {
-  padding: 10px;
-  border-radius: 10px;
-  border: none;
+/* DISABLED INPUT */
+.settings-card input:disabled {
+  background: #e2e8f0;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+/* FOCUS */
+.settings-card input:focus {
+  border-color: #6366f1;
+  background: white;
+  outline: none;
+}
+
+/* BUTTON GROUP */
+.button-group {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* EDIT BUTTON */
+.edit-btn {
+  flex: 1;
+  padding: 12px;
   background: #6366f1;
   color: white;
+  border-radius: 10px;
+  border: none;
+  font-weight: bold;
   cursor: pointer;
 }
 
-.profile-img {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  margin: auto;
+.edit-btn:hover {
+  background: #4f46e5;
+}
+
+/* SAVE BUTTON */
+.save-btn {
+  flex: 1;
+  padding: 12px;
+  background: #22c55e;
+  color: white;
+  border-radius: 10px;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.save-btn:hover {
+  background: #16a34a;
+}
+
+/* LOGOUT */
+.logout-btn {
+  flex: 1;
+  padding: 12px;
+  background: #ef4444;
+  color: white;
+  border-radius: 10px;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.logout-btn:hover {
+  background: #dc2626;
+}
+
+/* BACK */
+.back-button {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 16px;
+  color: #6366f1;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.2s;
+}
+
+.back-button:hover {
+  color: #4f46e5;
+}
+
+/* ================= FIX DROPDOWN TEXT ================= */
+
+.settings-dropdown,
+.dropdown-menu {
+  background: #ffffff !important; /* light background */
+}
+
+.settings-dropdown div,
+.dropdown-menu div,
+.settings-item,
+.dropdown-item {
+  color: #0f172a !important; /* dark visible text */
+  font-weight: 500;
+}
+
+/* HOVER EFFECT */
+.settings-dropdown div:hover,
+.dropdown-menu div:hover {
+  background: #eef2ff !important;
+  color: #6366f1 !important;
+}
+
+/* KEEP LOGOUT RED */
+.settings-item.logout,
+.dropdown-item.delete {
+  color: #ef4444 !important;
 }
