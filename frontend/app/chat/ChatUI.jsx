@@ -32,13 +32,18 @@ export default function ChatUI({
   messagesEndRef
 }) {
   const router = useRouter();
-
   const [openMenuId, setOpenMenuId] = useState(null);
 
-  // ✅ CLOSE DROPDOWN ON OUTSIDE CLICK
+  // ✅ NEW: SETTINGS MENU STATE
+  const [openSettingsMenu, setOpenSettingsMenu] = useState(false);
+
+  const otherUser = selectedChat ? getOtherUser(selectedChat) : null;
+
+  // ✅ CLOSE MESSAGE DROPDOWN
   useEffect(() => {
     const handleClickOutside = () => {
       setOpenMenuId(null);
+      setOpenSettingsMenu(false); // ✅ CLOSE SETTINGS MENU ALSO
     };
 
     window.addEventListener("click", handleClickOutside);
@@ -47,15 +52,8 @@ export default function ChatUI({
 
   // ✅ AUTO SCROLL
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef?.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  // ✅ MARK MESSAGES AS SEEN
-  useEffect(() => {
-    if (selectedChat && socket) {
-      socket.emit("message seen", selectedChat._id);
-    }
-  }, [selectedChat, socket]);
 
   return (
     <div className="chat-container">
@@ -75,13 +73,13 @@ export default function ChatUI({
 
           <h3 className="chat-heading">Chats</h3>
 
-          {chats.map((chat) => {
+          {chats?.map((chat) => {
             const otherUser = getOtherUser(chat);
-            const isOnline = onlineUsers.includes(otherUser?._id);
+            const isOnline = onlineUsers?.includes(otherUser?._id);
 
             return (
               <div
-                key={chat._id}
+                key={chat?._id}
                 className="chat-item"
                 onClick={() => {
                   setSelectedChat(chat);
@@ -95,7 +93,7 @@ export default function ChatUI({
                 <img
                   className="avatar"
                   src={
-                    chat.isGroupChat
+                    chat?.isGroupChat
                       ? "https://cdn-icons-png.flaticon.com/512/194/194938.png"
                       : otherUser?.profilePic || "https://i.pravatar.cc/40"
                   }
@@ -107,7 +105,7 @@ export default function ChatUI({
                     {isOnline && <span className="online-dot">●</span>}
                   </div>
                   <div className="chat-last">
-                    {chat.lastMessage?.content || ""}
+                    {chat?.lastMessage?.content || ""}
                   </div>
                 </div>
               </div>
@@ -116,13 +114,47 @@ export default function ChatUI({
 
         </div>
 
+        {/* ✅ UPDATED SETTINGS SECTION */}
         <div className="sidebar-bottom">
-          <button
-            className="settings-btn"
-            onClick={() => router.push("/settings")}
+
+          <div
+            className="settings-menu-container"
+            onClick={(e) => e.stopPropagation()}
           >
-            ⚙ Settings
-          </button>
+            <button
+              className="settings-btn"
+              onClick={() => setOpenSettingsMenu(!openSettingsMenu)}
+            >
+              ⚙ Settings
+            </button>
+
+            {openSettingsMenu && (
+              <div className="settings-dropdown">
+
+                <div
+                  className="settings-item"
+                  onClick={() => {
+                    router.push("/settings");
+                    setOpenSettingsMenu(false);
+                  }}
+                >
+                  👤 Profile
+                </div>
+
+                <div
+                  className="settings-item logout"
+                  onClick={() => {
+                    localStorage.removeItem("userInfo");
+                    router.push("/login");
+                  }}
+                >
+                  🚪 Logout
+                </div>
+
+              </div>
+            )}
+          </div>
+
         </div>
       </div>
 
@@ -134,12 +166,14 @@ export default function ChatUI({
             {/* HEADER */}
             <div className="chat-header">
               <img
-                src={getOtherUser(selectedChat)?.profilePic || "https://i.pravatar.cc/40"}
+                src={otherUser?.profilePic || "https://i.pravatar.cc/40"}
                 className="header-avatar"
               />
 
               <div>
-                <div className="chat-title">{getChatName(selectedChat)}</div>
+                <div className="chat-title">
+                  {getChatName(selectedChat)}
+                </div>
                 <div className="chat-status">
                   {isTyping ? "Typing..." : "Active now"}
                 </div>
@@ -149,18 +183,18 @@ export default function ChatUI({
             {/* MESSAGES */}
             <div className="messages">
 
-              {messages.map((msg) => {
-                const isMe = msg.sender?._id === currentUserId;
+              {messages?.map((msg, index) => {
+                const isMe = msg?.sender?._id === currentUserId;
 
                 return (
                   <div
-                    key={msg._id}
+                    key={msg?._id || msg?.tempId || index}
                     className={`message-row ${isMe ? "me" : "other"}`}
                   >
 
                     {!isMe && (
                       <img
-                        src={msg.sender?.profilePic || "https://i.pravatar.cc/40"}
+                        src={msg?.sender?.profilePic || "https://i.pravatar.cc/40"}
                         className="message-avatar"
                       />
                     )}
@@ -170,7 +204,7 @@ export default function ChatUI({
                       <div className={`message ${isMe ? "me" : "other"}`}>
 
                         {/* MENU */}
-                        {isMe && !msg.deleted && (
+                        {isMe && !msg?.deleted && (
                           <div
                             className="menu-container"
                             onClick={(e) => e.stopPropagation()}
@@ -218,7 +252,7 @@ export default function ChatUI({
                         )}
 
                         {/* CONTENT */}
-                        {editingMessageId === msg._id ? (
+                        {editingMessageId === msg?._id ? (
                           <div className="edit-box">
                             <input
                               className="edit-input"
@@ -236,38 +270,20 @@ export default function ChatUI({
                           </div>
                         ) : (
                           <div className="message-content">
-                            <div
-                              className={`message-text ${
-                                msg.deleted ? "deleted" : ""
-                              }`}
-                            >
-                              {msg.deleted
+                            <div className={`message-text ${msg?.deleted ? "deleted" : ""}`}>
+                              {msg?.deleted
                                 ? "🚫 This message was deleted"
-                                : msg.content}
+                                : msg?.content}
                             </div>
 
-                            {/* ✅ TIME + STATUS */}
-                            <div className="time-status">
-                              <span className="time">
-                                {new Date(msg.createdAt).toLocaleTimeString([], {
-                                  hour: "2-digit",
-                                  minute: "2-digit"
-                                })}
-                              </span>
-
-                              {isMe && (
-                                <span
-                                  className={`status ${
-                                    msg.status === "seen" ? "seen" : ""
-                                  }`}
-                                >
-                                  {msg.status === "sent" && "✓"}
-                                  {msg.status === "delivered" && "✓✓"}
-                                  {msg.status === "seen" && "✓✓"}
-                                </span>
-                              )}
+                            <div className="time">
+                              {msg?.createdAt
+                                ? new Date(msg.createdAt).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit"
+                                  })
+                                : ""}
                             </div>
-
                           </div>
                         )}
 
@@ -299,7 +315,7 @@ export default function ChatUI({
                 onChange={(e) => {
                   setNewMessage(e.target.value);
 
-                  if (!socket) return;
+                  if (!socket || !selectedChat) return;
 
                   if (!typing) {
                     setTyping(true);
@@ -322,10 +338,7 @@ export default function ChatUI({
                 placeholder="Type a message..."
               />
 
-              <button
-                className="send-btn"
-                onClick={sendMessage}
-              >
+              <button className="send-btn" onClick={sendMessage}>
                 ➤
               </button>
 
@@ -334,7 +347,7 @@ export default function ChatUI({
           </>
         ) : (
           <div className="empty-chat">
-            <h2>Select a chat</h2>
+            <h2>Select a chat to start messaging 💬</h2>
           </div>
         )}
 
