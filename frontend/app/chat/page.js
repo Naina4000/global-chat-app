@@ -28,10 +28,12 @@ useEffect(() => {
   selectedChatRef.current = selectedChat;
 }, [selectedChat]);
 
-const token =
-typeof window !== "undefined"
-? localStorage.getItem("token")
-: null;
+const userInfo =
+  typeof window !== "undefined"
+    ? JSON.parse(localStorage.getItem("userInfo"))
+    : null;
+
+const token = userInfo?.token;
 
 let currentUserId = null;
 
@@ -46,9 +48,11 @@ console.log("Token decode failed");
 /* ================= AUTH ================= */
 
 useEffect(() => {
-if (!token) {
-window.location.href = "/login";
-}
+  const user = localStorage.getItem("userInfo");
+
+  if (!user) {
+    router.push("/login");
+  }
 }, []);
 
 /* ================= SOCKET ================= */
@@ -317,7 +321,7 @@ console.error(error);
 
 const sendMessage = async () => {
 
-if (!newMessage || !selectedChat) return;
+if (!newMessage.trim() || !selectedChat) return;
 
 try {
 
@@ -372,7 +376,10 @@ content: editedText
 })
 }
 );
-
+if (!res.ok) {
+  console.error("Fetch chats failed:", res.status);
+  return;
+}
 const updated = await res.json();
 
 setMessages((prev) =>
@@ -433,22 +440,29 @@ console.error(error);
 
 };
 
+
 /* ================= HELPERS ================= */
 
-/* HELPERS */
 const getChatName = (chat) => {
-if (chat.isGroupChat) return chat.chatName;
-const otherUser = chat.users.find(
-(user) => user._id !== currentUserId
-);
-return otherUser?.username || "Private Chat";
+  if (!chat) return "Select a chat";
+
+  if (chat.isGroupChat) return chat.chatName;
+
+  const otherUser = chat.users?.find(
+    (user) => user._id !== currentUserId
+  );
+
+  return otherUser?.username || "User";
 };
 
 const getOtherUser = (chat) => {
-if (chat.isGroupChat) return null;
-return chat.users.find(
-(user) => user._id !== currentUserId
-);
+  if (!chat) return null;
+
+  if (chat.isGroupChat) return null;
+
+  return chat.users?.find(
+    (user) => user._id !== currentUserId
+  );
 };
 
 /* UI */
@@ -486,3 +500,4 @@ return (
   />
 );
 }
+
